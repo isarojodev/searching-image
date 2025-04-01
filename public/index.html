@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .search-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #search-input {
+            padding: 10px;
+            width: 300px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        #search-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        #search-button:hover {
+            background-color: #45a049;
+        }
+
+        .images-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .image-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .image-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .image-info {
+            padding: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Buscador de Imágenes con Unsplash API</h1>
+
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="Buscar imágenes...">
+        <button id="search-button">Buscar</button>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">Cargando imágenes...</div>
+    <div id="error-message" class="error-message" style="display: none;"></div>
+
+    <div class="images-container" id="images-container"></div>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const imagesContainer = document.getElementById('images-container');
+        const loadingElement = document.getElementById('loading');
+        const errorElement = document.getElementById('error-message');
+
+        // Buscar al hacer clic o presionar Enter
+        searchButton.addEventListener('click', searchImages);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchImages();
+        });
+
+        async function searchImages() {
+            const query = searchInput.value.trim();
+
+            if (!query) {
+                showError('Por favor ingresa un término de búsqueda');
+                return;
+            }
+
+            try {
+                // Mostrar loading y limpiar resultados anteriores
+                loadingElement.style.display = 'block';
+                errorElement.style.display = 'none';
+                imagesContainer.innerHTML = '';
+
+                const response = await fetch(`/search/images?query=${encodeURIComponent(query)}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error en la búsqueda');
+                }
+
+                const data = await response.json();
+                displayImages(data);
+            } catch (error) {
+                showError(error.message);
+                console.error('Error:', error);
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        function displayImages(data) {
+            if (data.images.length === 0) {
+                showError('No se encontraron imágenes. Intenta con otro término.');
+                return;
+            }
+
+            imagesContainer.innerHTML = data.images.map(image => `
+        <div class="image-card">
+          <img src="${image.url}" alt="${image.description}" style="background-color: ${image.color}">
+          <div class="image-info">
+            <p>${image.description}</p>
+            <p>Por: <a href="${image.user.profile}" target="_blank">${image.user.name}</a></p>
+          </div>
+        </div>
+      `).join('');
+        }
+
+        function showError(message) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            imagesContainer.innerHTML = '';
+        }
+    </script>
+</body>
+
+</html>
